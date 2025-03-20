@@ -1,4 +1,4 @@
-package redis
+package redisdb
 
 import (
 	"context"
@@ -17,6 +17,13 @@ type client interface {
 type RedisDriver struct {
 	client    client
 	useAtomic bool
+}
+
+func NewRedisDriver(client client, useAtomic bool) *RedisDriver {
+	return &RedisDriver{
+		client:    client,
+		useAtomic: useAtomic,
+	}
 }
 
 func (r *RedisDriver) Get(ctx context.Context, key string) ([]byte, error) {

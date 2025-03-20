@@ -9,6 +9,10 @@ import (
 	"github.com/pedrofaria/cacheable/serder"
 )
 
+type Cacheler[T any] interface {
+	Load(ctx context.Context, key string, loadFn func(ctx context.Context, id string) (*T, error)) (*T, error)
+}
+
 type cacheable[T any] struct {
 	driver     driver.Driver
 	serder     serder.Serder
@@ -25,7 +29,7 @@ func NewCacheable[T any](driver driver.Driver, serder serder.Serder, keyPrefix s
 	}
 }
 
-func (c *cacheable[T]) Get(ctx context.Context, key string, loadFn func(ctx context.Context, id string) (*T, error)) (*T, error) {
+func (c *cacheable[T]) Load(ctx context.Context, key string, loadFn func(ctx context.Context, id string) (*T, error)) (*T, error) {
 	data, err := c.driver.Get(ctx, c.keyPrefix+key)
 
 	if err != nil && errors.Is(err, driver.ErrNotFound) {
