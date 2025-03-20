@@ -14,19 +14,19 @@ type client interface {
 	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redisClient.BoolCmd
 }
 
-type RedisDriver struct {
+type redisDriver struct {
 	client    client
 	useAtomic bool
 }
 
-func NewRedisDriver(client client, useAtomic bool) *RedisDriver {
-	return &RedisDriver{
+func New(client client, useAtomic bool) *redisDriver {
+	return &redisDriver{
 		client:    client,
 		useAtomic: useAtomic,
 	}
 }
 
-func (r *RedisDriver) Get(ctx context.Context, key string) ([]byte, error) {
+func (r *redisDriver) Get(ctx context.Context, key string) ([]byte, error) {
 	res := r.client.Get(ctx, key)
 
 	if res.Err() != nil {
@@ -40,7 +40,7 @@ func (r *RedisDriver) Get(ctx context.Context, key string) ([]byte, error) {
 	return res.Bytes()
 }
 
-func (r *RedisDriver) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+func (r *redisDriver) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	if r.useAtomic {
 		return r.setAtomic(ctx, key, value, ttl)
 	}
@@ -53,7 +53,7 @@ func (r *RedisDriver) Set(ctx context.Context, key string, value []byte, ttl tim
 	return nil
 }
 
-func (r *RedisDriver) setAtomic(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+func (r *redisDriver) setAtomic(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	res := r.client.SetNX(ctx, key, value, ttl)
 	if res.Err() != nil {
 		return res.Err()
