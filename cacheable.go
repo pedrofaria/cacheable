@@ -24,15 +24,7 @@ type cacheable[T any] struct {
 	serder     serder.Serder
 	keyPrefix  string
 	defaultTtl time.Duration
-}
-
-func NewCacheable[T any](driver driver.Driver, serder serder.Serder, keyPrefix string, defaultTtl time.Duration) *cacheable[T] {
-	return &cacheable[T]{
-		driver:     driver,
-		serder:     serder,
-		keyPrefix:  keyPrefix,
-		defaultTtl: defaultTtl,
-	}
+	ignoreErr  bool
 }
 
 // Load returns a value from the cache by key. If the key does not exist in the cache,
@@ -69,6 +61,10 @@ func (c *cacheable[T]) Load(ctx context.Context, key string, loadFn func(ctx con
 	}
 
 	if err != nil {
+		if c.ignoreErr {
+			return loadFn(ctx)
+		}
+
 		return nil, err
 	}
 
@@ -99,12 +95,11 @@ func New[T any](driver driver.Driver, opts ...Option) *cacheable[T] {
 		opt(&cfg)
 	}
 
-	c := &cacheable[T]{
+	return &cacheable[T]{
 		driver:     driver,
 		serder:     cfg.serder,
 		keyPrefix:  cfg.keyPrefix,
 		defaultTtl: cfg.defaultTtl,
+		ignoreErr:  cfg.ignoreErr,
 	}
-
-	return c
 }

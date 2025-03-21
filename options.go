@@ -11,6 +11,7 @@ type config struct {
 	serder     serder.Serder
 	keyPrefix  string
 	defaultTtl time.Duration
+	ignoreErr  bool
 }
 
 type Option func(*config)
@@ -19,6 +20,7 @@ var defaultConfig = config{
 	serder:     json.NewJsonSerde(),
 	keyPrefix:  "",
 	defaultTtl: 0,
+	ignoreErr:  false,
 }
 
 func WithSerder(serder serder.Serder) Option {
@@ -36,5 +38,11 @@ func WithKeyPrefix(keyPrefix string) Option {
 func WithTtl(defaultTtl time.Duration) Option {
 	return func(c *config) {
 		c.defaultTtl = defaultTtl
+	}
+}
+
+func WithIgnoreErr(ignoreErr bool) Option {
+	return func(c *config) {
+		c.ignoreErr = ignoreErr
 	}
 }
