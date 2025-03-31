@@ -3,6 +3,7 @@ package cacheable
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/pedrofaria/cacheable/driver"
@@ -17,6 +18,21 @@ type Cacheler[T any] interface {
 	// a key to identify the cached item, and a loadFn which is called when
 	// the item is not found in the cache or needs to be refreshed.
 	Load(ctx context.Context, key string, loadFn func(ctx context.Context) (*T, error)) (*T, error)
+
+	Remove(ctx context.Context, key string) error
+
+	GetStats() Stats
+}
+
+var mtxStats = &sync.Mutex{}
+
+type Stats struct {
+	Hits       uint64
+	Miss       uint64
+	SetSuccess uint64
+	SetError   uint64
+	DelSuccess uint64
+	DelError   uint64
 }
 
 type cacheable[T any] struct {
@@ -25,6 +41,7 @@ type cacheable[T any] struct {
 	keyPrefix  string
 	defaultTtl time.Duration
 	ignoreErr  bool
+	stats      Stats
 }
 
 // Load returns a value from the cache by key. If the key does not exist in the cache,
@@ -43,6 +60,8 @@ func (c *cacheable[T]) Load(ctx context.Context, key string, loadFn func(ctx con
 	data, err := c.driver.Get(ctx, c.keyPrefix+key)
 
 	if err != nil && errors.Is(err, driver.ErrNotFound) {
+		atomicInc(&c.stats.Miss)
+
 		obj, err := loadFn(ctx)
 		if err != nil {
 			return nil, err
@@ -54,8 +73,11 @@ func (c *cacheable[T]) Load(ctx context.Context, key string, loadFn func(ctx con
 		}
 
 		if err := c.driver.Set(ctx, c.keyPrefix+key, data, c.defaultTtl); err != nil {
+			atomicInc(&c.stats.SetError)
 			return nil, err
 		}
+
+		atomicInc(&c.stats.SetSuccess)
 
 		return obj, nil
 	}
@@ -74,6 +96,21 @@ func (c *cacheable[T]) Load(ctx context.Context, key string, loadFn func(ctx con
 	}
 
 	return &obj, nil
+}
+
+func (c *cacheable[T]) Remove(ctx context.Context, key string) error {
+	if err := c.driver.Del(ctx, c.keyPrefix+key); err != nil {
+		atomicInc(&c.stats.DelError)
+		return err
+	}
+
+	atomicInc(&c.stats.DelSuccess)
+
+	return nil
+}
+
+func (c *cacheable[T]) GetStats() Stats {
+	return c.stats
 }
 
 // New creates a new cacheable instance with the given driver and options.
@@ -102,4 +139,15 @@ func New[T any](driver driver.Driver, opts ...Option) *cacheable[T] {
 		defaultTtl: cfg.defaultTtl,
 		ignoreErr:  cfg.ignoreErr,
 	}
+}
+
+func atomicInc(v *uint64) {
+	mtxStats.Lock()
+	defer mtxStats.Unlock()
+
+	if v == nil {
+		return
+	}
+
+	*v += 1
 }

@@ -12,6 +12,7 @@ type client interface {
 	Get(ctx context.Context, key string) *redisClient.StringCmd
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redisClient.StatusCmd
 	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redisClient.BoolCmd
+	Del(ctx context.Context, keys ...string) *redisClient.IntCmd
 }
 
 type redisDriver struct {
@@ -61,6 +62,15 @@ func (r *redisDriver) setAtomic(ctx context.Context, key string, value []byte, t
 
 	if !res.Val() {
 		return driver.ErrKeyExists
+	}
+
+	return nil
+}
+
+func (r *redisDriver) Del(ctx context.Context, key string) error {
+	res := r.client.Del(ctx, key)
+	if res.Err() != nil {
+		return res.Err()
 	}
 
 	return nil
