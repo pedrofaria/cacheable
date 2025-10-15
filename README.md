@@ -152,12 +152,116 @@ func main() {
 	})
 
 	cache := cacheable.New[model.Notification](
-		ristretto..New(ristrettoCache),
+		ristretto.New(ristrettoCache),
 		cacheable.WithKeyPrefix("notification:communication_type_id:"),
-		cacheable.WithTtl(24*time.Hour),
+		cacheable.WithTtl(10*time.Minute),
 	)
 	defer cache.Close()
 
 	// ...
 }
 ```
+
+## Serialization and Deserialization
+
+* JSON (default)
+* Binary
+* Message Pack
+
+Benchmark results:
+
+```
+goos: darwin
+goarch: arm64
+pkg: github.com/pedrofaria/cacheable
+cpu: Apple M2 Pro
+Benchmark_Cacheable_Load_Binary-12     	  176868	      6866 ns/op	    6928 B/op	     156 allocs/op
+Benchmark_Cacheable_Load_Json-12       	 2946112	     402.2 ns/op	     256 B/op	       7 allocs/op
+Benchmark_Cacheable_Load_Msgpack-12    	 5881483	     203.1 ns/op	      88 B/op	       4 allocs/op
+PASS
+ok  	github.com/pedrofaria/cacheable	5.740s
+```
+
+### Binary
+
+https://github.com/pedrofaria/cacheable/tree/main/serder/binary
+
+```golang
+import "github.com/pedrofaria/cachable/serder/binary"
+```
+
+Example:
+
+```golang
+package main
+
+import (
+    "context"
+    "log"
+
+    "github.com/pedrofaria/cachable"
+    "github.com/pedrofaria/cachable/driver/ristretto"
+	"github.com/pedrofaria/cachable/serder/binary"
+)
+
+func main() {
+	ristrettoCache, _ := ristretto.NewCache(&ristretto.Config[string, []byte]{
+		NumCounters: 1e7,     // number of keys to track frequency of (10M).
+		MaxCost:     1 << 30, // maximum cost of cache (1GB).
+		BufferItems: 64,      // number of keys per Get buffer.
+	})
+
+	cache := cacheable.New[model.Notification](
+		ristretto.New(ristrettoCache),
+		cacheable.WithKeyPrefix("notification:communication_type_id:"),
+		cacheable.WithTtl(10*time.Minute),
+		cacheable.WithSerder(binary.New())
+	)
+	defer cache.Close()
+
+	// ...
+}
+
+````
+
+### Message Pack
+
+https://github.com/pedrofaria/cacheable/tree/main/serder/msgpack
+
+```golang
+import "github.com/pedrofaria/cachable/serder/msgpack"
+```
+
+Example:
+
+```golang
+package main
+
+import (
+    "context"
+    "log"
+
+    "github.com/pedrofaria/cachable"
+    "github.com/pedrofaria/cachable/driver/ristretto"
+	"github.com/pedrofaria/cachable/serder/binary"
+)
+
+func main() {
+	ristrettoCache, _ := ristretto.NewCache(&ristretto.Config[string, []byte]{
+		NumCounters: 1e7,     // number of keys to track frequency of (10M).
+		MaxCost:     1 << 30, // maximum cost of cache (1GB).
+		BufferItems: 64,      // number of keys per Get buffer.
+	})
+
+	cache := cacheable.New[model.Notification](
+		ristretto.New(ristrettoCache),
+		cacheable.WithKeyPrefix("notification:communication_type_id:"),
+		cacheable.WithTtl(10*time.Minute),
+		cacheable.WithSerder(msgpack.New())
+	)
+	defer cache.Close()
+
+	// ...
+}
+
+````

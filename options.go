@@ -17,7 +17,7 @@ type config struct {
 type Option func(*config)
 
 var defaultConfig = config{
-	serder:     json.NewJsonSerde(),
+	serder:     json.New(),
 	keyPrefix:  "",
 	defaultTtl: 0,
 	ignoreErr:  false,

@@ -2,16 +2,16 @@ package json
 
 import "encoding/json"
 
-type JsonSerde struct{}
+type jsonSerder struct{}
 
-func NewJsonSerde() *JsonSerde {
-	return &JsonSerde{}
+func New() *jsonSerder {
+	return &jsonSerder{}
 }
 
-func (j *JsonSerde) Serialize(obj any) ([]byte, error) {
+func (j *jsonSerder) Serialize(obj any) ([]byte, error) {
 	return json.Marshal(obj)
 }
 
-func (j *JsonSerde) Deserialize(data []byte, obj any) error {
+func (j *jsonSerder) Deserialize(data []byte, obj any) error {
 	return json.Unmarshal(data, obj)
 }
