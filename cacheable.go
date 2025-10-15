@@ -98,6 +98,9 @@ func (c *cacheable[T]) Load(ctx context.Context, key string, loadFn func(ctx con
 	return &obj, nil
 }
 
+// Remove deletes the cache entry associated with the specified key.
+// It prepends the configured key prefix to the provided key before deletion.
+// Returns an error if the deletion operation fails, otherwise returns nil.
 func (c *cacheable[T]) Remove(ctx context.Context, key string) error {
 	if err := c.driver.Del(ctx, c.keyPrefix+key); err != nil {
 		atomicInc(&c.stats.DelError)
@@ -109,8 +112,17 @@ func (c *cacheable[T]) Remove(ctx context.Context, key string) error {
 	return nil
 }
 
+// GetStats returns the current statistics for the cacheable instance.
+// The returned Stats contains metrics such as cache hits, misses, and other
+// performance indicators that can be used to monitor cache effectiveness.
 func (c *cacheable[T]) GetStats() Stats {
 	return c.stats
+}
+
+// Close closes the cacheable instance and releases any resources held by the underlying driver.
+// It returns an error if the driver fails to close properly.
+func (c *cacheable[T]) Close() error {
+	return c.driver.Close()
 }
 
 // New creates a new cacheable instance with the given driver and options.

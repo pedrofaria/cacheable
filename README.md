@@ -26,6 +26,7 @@ func main() {
 		cacheable.WithKeyPrefix("notification:communication_type_id:"),
 		cacheable.WithTtl(24*time.Hour),
 	)
+	defer cacheNotification.Close()
 
     repo := repository.NewNotificationRepository(dbConn)
     storage := service.NewCostumerNotificationStorage(repo, cacheNotification)
@@ -71,5 +72,92 @@ func (s *CostumerNotificationStorage) FetchNotification(ctx context.Context, id 
 	return s.cache.Load(ctx, id, func(ctx context.Context) (*model.Notification, error) {
 		return s.repo.Fetch(ctx, id)
 	})
+}
+```
+
+## Drivers
+
+* Redis
+* Ristretto (in memory)
+
+### Redis
+
+https://github.com/pedrofaria/cacheable/tree/main/driver/redisdb
+
+```golang
+import "github.com/pedrofaria/cachable/driver/redisdb"
+```
+
+Example:
+
+```golang
+package main
+
+import (
+    "context"
+    "log"
+
+	"github.com/redis/go-redis/v9"
+    "github.com/pedrofaria/cachable"
+    "github.com/pedrofaria/cachable/driver/redisdb"
+)
+
+func main() {
+	redisConn := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:          []string{"localhost:6379"},
+		RouteByLatency: true,
+		Username:       "default",
+		Password:       "default",
+	})
+
+	cache := cacheable.New[model.Notification](
+		redisdb.New(redisConn, false),
+		cacheable.WithKeyPrefix("notification:communication_type_id:"),
+		cacheable.WithTtl(24*time.Hour),
+	)
+	defer cache.Close()
+
+	// ...
+}
+```
+
+### Ristretto
+
+https://github.com/pedrofaria/cacheable/tree/main/driver/ristretto
+
+Library: https://github.com/dgraph-io/ristretto
+
+```golang
+import "github.com/pedrofaria/cachable/driver/ristretto"
+```
+
+Example:
+
+```golang
+package main
+
+import (
+    "context"
+    "log"
+
+    "github.com/pedrofaria/cachable"
+    "github.com/pedrofaria/cachable/driver/ristretto"
+)
+
+func main() {
+	ristrettoCache, _ := ristretto.NewCache(&ristretto.Config[string, []byte]{
+		NumCounters: 1e7,     // number of keys to track frequency of (10M).
+		MaxCost:     1 << 30, // maximum cost of cache (1GB).
+		BufferItems: 64,      // number of keys per Get buffer.
+	})
+
+	cache := cacheable.New[model.Notification](
+		ristretto..New(ristrettoCache),
+		cacheable.WithKeyPrefix("notification:communication_type_id:"),
+		cacheable.WithTtl(24*time.Hour),
+	)
+	defer cache.Close()
+
+	// ...
 }
 ```

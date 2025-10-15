@@ -13,6 +13,7 @@ type client interface {
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redisClient.StatusCmd
 	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redisClient.BoolCmd
 	Del(ctx context.Context, keys ...string) *redisClient.IntCmd
+	Close() error
 }
 
 type redisDriver struct {
@@ -74,4 +75,8 @@ func (r *redisDriver) Del(ctx context.Context, key string) error {
 	}
 
 	return nil
+}
+
+func (r *redisDriver) Close() error {
+	return r.client.Close()
 }
