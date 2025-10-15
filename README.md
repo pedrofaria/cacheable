@@ -243,7 +243,7 @@ import (
 
     "github.com/pedrofaria/cachable"
     "github.com/pedrofaria/cachable/driver/ristretto"
-	"github.com/pedrofaria/cachable/serder/binary"
+	"github.com/pedrofaria/cachable/serder/msgpack"
 )
 
 func main() {
